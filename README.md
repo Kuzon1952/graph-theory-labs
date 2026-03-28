@@ -1,4 +1,4 @@
-# Graph Theory Labs (SPbSTU, Spring 2025/2026)
+# Graph Theory Labs (SPbSTU, 2nd year 2nd sem., Spring 2025/2026)
 
 This repository contains laboratory works for the Graph Theory course at Peter the Great St. Petersburg Polytechnic University.
 
