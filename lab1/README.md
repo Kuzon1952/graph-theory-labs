@@ -31,7 +31,7 @@ This project implements:
 
 ### Normal Distribution (Box-Muller)
 
-x = √(-2 ln(r₁)) · cos(2π r₂)
+x = √((-2 ln(r₁)) · cos(2π r₂))
 
 y = μ + σx
 
