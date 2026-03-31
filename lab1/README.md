@@ -1,55 +1,93 @@
-# Graph Theory — Lab 1  
+# Graph Theory — Lab 1
 
 **Variant:** 36  
-**Topic:** Graph generation using Normal (Gaussian) distribution  
-**Reference:** V. Vadzinsky (p.106 — Box-Muller method)
+**Topic:** Graph generation using the Normal distribution  
+**Reference:** V. Vadzinsky  
 
 ---
 
 ## 📌 Description
 
-This project implements:
+This project implements generation and analysis of random graphs in C++.
 
-- Graph generation using **Normal distribution**
-- Construction of a **tree using vertex degrees and Prufer sequence**
-- Conversion to **directed graph**
-- Analysis of graph properties:
-  - Eccentricity
-  - Radius
-  - Diameter
-  - Center vertices
-- **Shimbel method**:
-  - Minimum path matrix
-  - Maximum path matrix
-- **Route search**:
-  - Existence of path
-  - Number of routes
+The program can generate either:
+
+- Undirected connected acyclic graph (tree)  
+- Directed acyclic graph (DAG)  
+
+using values derived from a normal-distribution-based random generator.
+
+---
+
+## ⚙️ Features
+
+After generation, the program supports:
+
+- Adjacency matrix / adjacency list / edge list output  
+- Eccentricity computation  
+- Radius and diameter computation  
+- Center and diametral vertices detection  
+- Shimbell’s method:
+  - Minimum-path matrix  
+  - Maximum-path matrix  
+- Route search:
+  - Existence of path  
+  - Number of routes  
+  - Printing all simple routes  
+
+---
+
+## 🗂️ Project Structure
+
+lab1/
+
+├── main.cpp  
+├── graph.cpp / graph.h  
+├── distribution.cpp / distribution.h  
+├── tree_generator.cpp / tree_generator.h  
+├── eccentricity.cpp / eccentricity.h  
+├── shimbell.cpp / shimbell.h  
+├── path_counter.cpp / path_counter.h  
+├── CMakeLists.txt  
+
+Executable: graph_lab
 
 ---
 
 ## 📐 Mathematical Background
 
-### Normal Distribution (Box-Muller)
+### Normal Distribution Approximation
 
-x = √((-2 ln(r₁)) · cos(2π r₂))
-
-y = μ + σx
+x = sqrt(12/n) * (sum(r_i) - n/2)
 
 Where:
-- r₁, r₂ ∈ (0,1]
-- μ — mean
-- σ — standard deviation
+
+- r_i ~ U(0,1)  
+- n = 12 (default)
 
 ---
 
 ## 🌳 Graph Generation
 
-1. Generate vertex degrees using Normal distribution  
+### Undirected Graph (Tree)
+
+1. Generate degree sequence using Normal distribution  
 2. Ensure:
-   sum of degrees = 2(n - 1)  
-3. Build Prufer sequence  
-4. Convert to tree  
-5. Assign directions → directed graph  
+   sum(d_i) = 2(n - 1)  
+3. Build tree using degree-proportional attachment  
+
+✔ Connected  
+✔ Acyclic  
+
+---
+
+### Directed Graph (DAG)
+
+1. Generate random topological order  
+2. Add spanning path  
+3. Add extra forward edges using Normal distribution  
+
+✔ Acyclic  
 
 ---
 
@@ -57,39 +95,100 @@ Where:
 
 ### Undirected Tree
 - Symmetric matrix  
-- One path between any vertices  
+- One path between any two vertices  
 
 ### Directed Graph
 - Asymmetric matrix  
-- Random directions  
+- No cycles  
 
 ---
 
-## ⚙️ Features
+## 📊 Algorithms
 
-### Graph Generation
-- Uses Gaussian distribution  
-- Builds adjacency matrix and list  
-
-### Graph Properties
-- Distance matrix  
-- Eccentricity:
-  e(v) = max distance  
-
-- Radius:
-  r = min e(v)  
-
-- Diameter:
-  D = max e(v)  
+### Graph Output
+- Adjacency list  
+- Edge list  
+- Adjacency matrix  
+- Weight matrix  
 
 ---
 
-## ▶️ How to Run
+### Graph Metrics
 
-Compile:
+Distance matrix  
 
-g++ main.cpp -o graph
+Eccentricity:
+e(v) = max distance  
+
+Radius:
+r = min e(v)  
+
+Diameter:
+D = max e(v)  
+
+---
+
+### Shimbell Method
+
+- Minimum path matrix  
+- Maximum path matrix  
+
+---
+
+### Route Search
+
+- Path existence  
+- Number of routes  
+- All paths printed (DFS)  
+
+---
+
+## 📋 Menu
+
+1. Generate graph  
+2. Show graph  
+3. Eccentricity / radius / diameter  
+4. Shimbell method  
+5. Route search  
+0. Exit  
+
+---
+
+## ▶️ Build and Run
+
+### CMake
+
+cmake -S . -B build  
+cmake --build build  
 
 Run:
 
-./graph
+.\build\graph_lab.exe  
+
+---
+
+### g++
+
+g++ -std=c++17 main.cpp graph.cpp distribution.cpp tree_generator.cpp eccentricity.cpp shimbell.cpp path_counter.cpp -o graph_lab  
+
+Run:
+
+./graph_lab  
+
+---
+
+## 📝 Notes
+
+- Vertices displayed from 1 (internally 0-based)  
+- Supports positive / negative / mixed weights  
+- Directed graphs are DAGs  
+
+---
+
+## 🚀 Status
+
+✔ Modular structure  
+✔ All algorithms implemented  
+⚠️ TODO:
+- Fix Shimbell zero handling  
+- Improve graph density  
