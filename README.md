@@ -15,11 +15,9 @@ This repository contains laboratory works for the Graph Theory course at Peter t
 
 ### Lab 2
 - Graph traversal:
-  - BFS (Breadth-First Search)
   - DFS (Depth-First Search)
 - Graph algorithms:
-  - Dijkstra
-  - Bellman-Ford
+
   - Floyd-Warshall
 - Performance comparison
 

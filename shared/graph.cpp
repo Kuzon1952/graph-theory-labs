@@ -1,5 +1,5 @@
 #include "graph.h"
-#include "shimbell.h"   // SHIMBELL_INF, SHIMBELL_NINF
+#include "constants.h"  // SHIMBELL_INF, SHIMBELL_NINF
 #include <iomanip>
 #include <string>
 

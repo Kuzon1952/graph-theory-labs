@@ -1,5 +1,6 @@
 #pragma once
 #include "graph.h"
+#include "constants.h"
 #include <vector>
 
 using Matrix = std::vector<std::vector<double>>;
@@ -23,6 +24,4 @@ std::pair<Matrix, Matrix> shimbell(const Matrix& W, int k);
 // values <= -INF_THRESHOLD are shown as "-INF".
 void printMatrix(const Matrix& M);
 
-// Sentinel values
-constexpr double SHIMBELL_INF  =  1e15;
-constexpr double SHIMBELL_NINF = -1e15;
+

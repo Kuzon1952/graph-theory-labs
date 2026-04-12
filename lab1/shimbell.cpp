@@ -31,7 +31,7 @@ Matrix generateWeightMatrix(const Graph& g, WeightMode mode) {
     Matrix W(n, std::vector<double>(n, SHIMBELL_INF));
 
     for (int i = 0; i < n; i++) {
-        W[i][i] = 0.0;   // free self-loop
+        W[i][i] = SHIMBELL_INF;   // no self-loop — exact k-step semantics
         for (int j = 0; j < n; j++) {
             if (i != j && g.hasEdge(i, j))
                 W[i][j] = sampleWeight(mode);
@@ -87,13 +87,14 @@ static Matrix identityMax(int n) {
 }
 
 // Build the "max" version of the weight matrix:
-// edges keep their weight, non-edges → SHIMBELL_NINF, diagonal → 0.
+// edges keep their weight, non-edges → SHIMBELL_NINF, diagonal → SHIMBELL_NINF.
+// W[i][i] == SHIMBELL_INF, so the condition below correctly skips the diagonal.
 static Matrix toMaxMatrix(const Matrix& W) {
     int n = static_cast<int>(W.size());
     Matrix M(n, std::vector<double>(n, SHIMBELL_NINF));
     for (int i = 0; i < n; i++)
         for (int j = 0; j < n; j++) {
-            if (W[i][j] < SHIMBELL_INF)   // real edge or diagonal
+            if (W[i][j] < SHIMBELL_INF)   // real edges only (diagonal is INF -> skipped)
                 M[i][j] = W[i][j];
         }
     return M;
@@ -149,6 +150,8 @@ void printMatrix(const Matrix& M) {
     }
 }
 
-//todo:
-//i. need to increse the parametter so that i can get more edges in the matrix
-//ii. in the shimbell : problem -> 0 also counting but it should not be
+/*
+todo solved:
+i. need to increse the parametter so that i can get more edges in the matrix
+ii. in the shimbell : problem -> 0 also counting but it should not be
+*/

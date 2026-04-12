@@ -3,7 +3,7 @@
 #include <string>
 #include <iomanip>
 #include "graph.h"
-#include "tree_generator.h"
+#include "dag_generator.h"
 #include "eccentricity.h"
 #include "shimbell.h"
 #include "path_counter.h"
@@ -44,21 +44,23 @@ void menuGenerateGraph() {
     if (n <= 0) { std::cout << "  Must be > 0.\n"; return; }
 
     std::cout << "  Graph type:\n"
-              << "    1. Undirected \n"
-              << "    2. Directed    \n";
+              << "    1. Directed\n"
+              << "    2. Undirected (derived from directed by ignoring edge directions)\n";
     int choice = readInt("  Choose [1/2]: ");
-    bool directed = (choice == 2);
+    bool directed = (choice == 1);
 
-    gGraph       = generateTree(n, directed);
+    gGraph = generateDAG(n, directed);
+
     gGraphReady  = true;
 
-    // Auto-generate weight matrix (mixed mode) so option 2 can show it immediately
+    // Auto-generate weight matrix (mixed mode)
     gWeightMatrix = generateWeightMatrix(gGraph, MIXED);
     gWeightReady  = true;
 
-    // Option 1: brief — just the adjacency matrix
     gGraph.printAdjMatrix();
-    std::cout << "  Graph with " << n << " vertices generated.\n"
+    std::cout << "  Graph with " << n << " vertices generated";
+    if (!directed) std::cout << " (undirected, derived from directed DAG)";
+    std::cout << ".\n"
               << "  (Use option 2 for full details including weight matrix.)\n";
 }
 
