@@ -4,9 +4,11 @@ add_executable(lab_combined
     ${CMAKE_SOURCE_DIR}/lab1/eccentricity.cpp
     ${CMAKE_SOURCE_DIR}/lab1/shimbell.cpp
     ${CMAKE_SOURCE_DIR}/lab1/path_counter.cpp
-    # Lab 2 — uncomment when ready
-    # ${CMAKE_SOURCE_DIR}/lab2/dfs.cpp
-    # ${CMAKE_SOURCE_DIR}/lab2/floyd_warshall.cpp
+        ../lab2/dfs.cpp
+        ../lab2/dfs.cpp
+        # Lab 2 — uncomment when ready
+     ${CMAKE_SOURCE_DIR}/lab2/dfs.cpp
+     ${CMAKE_SOURCE_DIR}/lab2/floyd_warshall.cpp
     # Lab 3 — uncomment when ready
     # ${CMAKE_SOURCE_DIR}/lab3/ford_fulkerson.cpp
     # ${CMAKE_SOURCE_DIR}/lab3/min_cost_flow.cpp

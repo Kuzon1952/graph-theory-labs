@@ -16,20 +16,11 @@ static std::mt19937& getRng() {
 //
 //  1.0 = sparse    4.0 = medium    8.0 = dense (current)
 // ─────────────────────────────────────────────────────────────────────────────
-// NEW: separate scales
+// separate scales
 static constexpr double EXTRA_EDGE_SCALE_DIRECTED   = 8.0;  // dense DAG
 static constexpr double EXTRA_EDGE_SCALE_UNDIRECTED = 1.5;  // sparse enough to vary after symmetrize
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  OLD COMMENT (kept for reference):
-//  UNDIRECTED: connected acyclic graph (= tree)
-//  Algorithm: degree-proportional random attachment
-//  1. Sample degree sequence from Normal distribution; adjust sum to 2*(n-1).
-//  2. Keep a "capacity" counter per vertex = desired degree.
-//  3. Insert vertices one-by-one; choose parent proportional to remaining capacity.
-//  Guaranteed: connected + acyclic (new vertex always attaches to existing tree).
-//
-//  NEW: renamed from buildUndirectedTree() to buildUndirectedGraph().
+//  renamed from buildUndirectedTree() to buildUndirectedGraph().
 //  The structure is still a tree (n vertices, n-1 edges, connected, acyclic)
 //  but we avoid the name "tree" in the function to stay consistent with the
 //  rename of the public entry point generateTree() -> generateDAG().
@@ -44,7 +35,6 @@ static Graph buildUndirectedGraph(int n) {
     std::vector<int> capacity = generateDegreeSequence(n);
     auto& rng = getRng();
 
-    // OLD: std::vector<int> inTree;
     // NEW: renamed to inGraph — tracks vertices already added to the graph
     std::vector<int> inGraph;
     inGraph.reserve(n);
@@ -151,8 +141,7 @@ static Graph buildDirectedDAG(int n, double scale = EXTRA_EDGE_SCALE_DIRECTED) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Public entry point
 //
-//  OLD: Graph generateTree(int n, bool directed)
-//  NEW: renamed to generateDAG() — the result is a DAG, not a tree.
+//  renamed to generateDAG() — the result is a DAG, not a tree.
 //  A tree has exactly n-1 edges; our directed graph has up to n*(n-1)/2 edges.
 // ─────────────────────────────────────────────────────────────────────────────
 Graph generateDAG(int n, bool directed) {

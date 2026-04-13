@@ -1,18 +1,18 @@
 add_executable(lab2
-    main.cpp
-    # dfs.cpp          <- uncomment when you add it
-    # floyd_warshall.cpp  <- uncomment when you add it
+        main.cpp
+        dfs.cpp
+        floyd_warshall.cpp
 )
 
 target_include_directories(lab2 PRIVATE
-    ${CMAKE_SOURCE_DIR}/shared
-    ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/shared
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_sources(lab2 PRIVATE
-    ${CMAKE_SOURCE_DIR}/shared/graph.cpp
-    ${CMAKE_SOURCE_DIR}/shared/distribution.cpp
-    ${CMAKE_SOURCE_DIR}/shared/dag_generator.cpp
+        ${CMAKE_SOURCE_DIR}/shared/graph.cpp
+        ${CMAKE_SOURCE_DIR}/shared/distribution.cpp
+        ${CMAKE_SOURCE_DIR}/shared/dag_generator.cpp
 )
 
 if(MSVC)

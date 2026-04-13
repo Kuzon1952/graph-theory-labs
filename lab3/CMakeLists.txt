@@ -1,6 +1,7 @@
 add_executable(lab3
     main.cpp
-    # ford_fulkerson.cpp   <- uncomment when you add it
+        #../lab2/dfs.cpp
+        # ford_fulkerson.cpp   <- uncomment when you add it
     # min_cost_flow.cpp    <- uncomment when you add it
 )
 
