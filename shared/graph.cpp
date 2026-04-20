@@ -35,15 +35,22 @@ void Graph::printAdjMatrix() const {
     std::cout << "  ADJACENCY MATRIX  [" << type << "]\n";
     std::cout << "  " << sep << "\n\n";
 
+    const int CW = 5;
     std::cout << "       ";
     for (int j = 0; j < n; j++)
-        std::cout << std::setw(4) << D(j);
-    std::cout << "\n  " << std::string(5 + n * 4, '-') << "\n";
+        std::cout << std::setw(CW) << D(j);
+    std::cout << "\n  " << std::string(5 + n * CW, '-') << "\n";
 
     for (int i = 0; i < n; i++) {
         std::cout << "  " << std::setw(3) << D(i) << " |";
-        for (int j = 0; j < n; j++)
-            std::cout << std::setw(4) << adj[i][j];
+        for (int j = 0; j < n; j++) {
+            if (i == j)
+                std::cout << std::setw(CW) << 0;
+            else if (adj[i][j])
+                std::cout << std::setw(CW) << 1;
+            else
+                std::cout << std::setw(CW) << "inf";
+        }
         std::cout << "\n";
     }
 
@@ -90,15 +97,22 @@ void Graph::printFull(const std::vector<std::vector<double>>* W) const {
     std::cout << "  ADJACENCY MATRIX  [" << type << "]\n";
     std::cout << "  " << sep << "\n\n";
 
+    const int ACW = 5;
     std::cout << "       ";
     for (int j = 0; j < n; j++)
-        std::cout << std::setw(4) << D(j);
-    std::cout << "\n  " << std::string(5 + n * 4, '-') << "\n";
+        std::cout << std::setw(ACW) << D(j);
+    std::cout << "\n  " << std::string(5 + n * ACW, '-') << "\n";
 
     for (int i = 0; i < n; i++) {
         std::cout << "  " << std::setw(3) << D(i) << " |";
-        for (int j = 0; j < n; j++)
-            std::cout << std::setw(4) << adj[i][j];
+        for (int j = 0; j < n; j++) {
+            if (i == j)
+                std::cout << std::setw(ACW) << 0;
+            else if (adj[i][j])
+                std::cout << std::setw(ACW) << 1;
+            else
+                std::cout << std::setw(ACW) << "inf";
+        }
         std::cout << "\n";
     }
     if (!directed)
