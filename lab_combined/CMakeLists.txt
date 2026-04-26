@@ -10,6 +10,11 @@ add_executable(lab_combined
         # Lab 3
         ${CMAKE_SOURCE_DIR}/lab3/ford_fulkerson.cpp
         ${CMAKE_SOURCE_DIR}/lab3/min_cost_flow.cpp
+        # Lab 4
+        ${CMAKE_SOURCE_DIR}/lab4/kirchhoff.cpp
+        ${CMAKE_SOURCE_DIR}/lab4/boruvka.cpp
+        ${CMAKE_SOURCE_DIR}/lab4/prufer.cpp
+        ${CMAKE_SOURCE_DIR}/lab4/edge_cover.cpp
 )
 
 target_include_directories(lab_combined PRIVATE
@@ -17,6 +22,7 @@ target_include_directories(lab_combined PRIVATE
         ${CMAKE_SOURCE_DIR}/lab1
         ${CMAKE_SOURCE_DIR}/lab2
         ${CMAKE_SOURCE_DIR}/lab3
+        ${CMAKE_SOURCE_DIR}/lab4
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

@@ -10,25 +10,28 @@
 //  Weight matrix generation
 // ─────────────────────────────────────────────────────────────────────────────
 std::vector<std::vector<double>>
-generateWeightMatrix(const Graph& g, bool allowNegative) {
+generateWeightMatrix(const Graph& g, int mode) {
     static std::mt19937 rng(std::random_device{}());
     const int n = g.n;
     std::vector<std::vector<double>> W(n, std::vector<double>(n, SHIMBELL_INF));
     for (int i = 0; i < n; i++) W[i][i] = 0.0;
+
+    std::uniform_int_distribution<int> posDist(1, 20);
+    std::uniform_int_distribution<int> negDist(1, 20);
+    std::uniform_int_distribution<int> coinFlip(0, 1);
 
     for (int u = 0; u < n; u++) {
         for (int v = 0; v < n; v++) {
             if (u == v) continue;
             if (!g.hasEdge(u, v)) continue;
             int w;
-            if (allowNegative) {
-                std::uniform_int_distribution<int> dist(1, 30);
-                w = dist(rng);
-                if (w <= 10) w = -(w);
-                else         w = (w - 10);
+            if (mode == 1) {
+                w = -negDist(rng);
+            } else if (mode == 2) {
+                w = posDist(rng);
+                if (coinFlip(rng)) w = -w;
             } else {
-                std::uniform_int_distribution<int> dist(1, 20);
-                w = dist(rng);
+                w = posDist(rng);
             }
             W[u][v] = static_cast<double>(w);
         }
@@ -73,7 +76,7 @@ static void printHMatrix(const std::vector<std::vector<int>>& H,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Floyd-Warshall — exactly per teacher's lecture
+//  Floyd-Warshall
 //
 //  Loop order:  i (intermediate vertex), j (source row), k (destination col)
 //  Condition:   j≠i  &  T[j][i]≠INF  &  i≠k  &  T[i][k]≠INF
@@ -102,13 +105,13 @@ FloydResult floydWarshall(const Graph&                            g,
             for (int k = 0; k < n; k++) {
                 iterations++;          // unconditional — always n^3 total
 
-                if (j == i) continue;
-                if (T[j][i] >= SHIMBELL_INF / 2) continue;
+                if (j == i) continue;//same ver
+                if (T[j][i] >= SHIMBELL_INF / 2) continue;//no path
                 if (i == k) continue;
                 if (T[i][k] >= SHIMBELL_INF / 2) continue;
 
                 double via = T[j][i] + T[i][k];
-                if (T[j][k] >= SHIMBELL_INF / 2 || T[j][k] > via) {
+                if (T[j][k] >= SHIMBELL_INF / 2 || T[j][k] > via) {//gocha
                     H[j][k] = H[j][i];   // first hop on new shorter path
                     T[j][k] = via;
                 }
@@ -120,7 +123,7 @@ FloydResult floydWarshall(const Graph&                            g,
     bool hasNegCycle = false;
     std::vector<int> negCycleVerts;
     for (int j = 0; j < n; j++) {
-        if (T[j][j] < 0.0) {
+        if (T[j][j] < -1e-9) {
             hasNegCycle = true;
             negCycleVerts.push_back(j);
         }
@@ -156,12 +159,12 @@ void printFloydResult(const FloydResult&                       res,
         }
         std::cout << "\n";
         std::cout << "\n  Total iterations: " << res.iterations
-                  << "  (n=" << n << "  →  n^3=" << (long long)n*n*n << ")\n";
+                  << "  (n=" << n << "  where  n^3=" << (long long)n*n*n << ")\n";
         std::cout << "\n  " << sep << "\n";
         return;
     }
 
-    // Path reconstruction — teacher's algorithm:
+    // Path reconstruction
     //   w := src;  yield w
     //   while w != dst do  w := H[w][dst];  yield w
     std::cout << "\n  Shortest path from " << src + 1
@@ -178,7 +181,7 @@ void printFloydResult(const FloydResult&                       res,
         bool ok = true;
         path.push_back(w);
         while (w != dst) {
-            int nxt = res.H[w][dst] - 1;  // H is 1-based → convert to 0-based
+            int nxt = res.H[w][dst] - 1;  // H is 1-based to convert to 0-based
             if (nxt < 0 || nxt >= n || --guard < 0) { ok = false; break; }
             w = nxt;
             path.push_back(w);
