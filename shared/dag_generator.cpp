@@ -20,55 +20,24 @@ static std::mt19937& getRng() {
 static constexpr double EXTRA_EDGE_SCALE_DIRECTED   = 8.0;  // dense DAG
 static constexpr double EXTRA_EDGE_SCALE_UNDIRECTED = 1.5;  // sparse enough to vary after symmetrize
 
-//  renamed from buildUndirectedTree() to buildUndirectedGraph().
-//  The structure is still a tree (n vertices, n-1 edges, connected, acyclic)
-//  but we avoid the name "tree" in the function to stay consistent with the
-//  rename of the public entry point generateTree() -> generateDAG().
-//  Variable renamed: inTree -> inGraph (tracks which vertices are already
-//  in the graph being built).
+static Graph buildDirectedDAG(int n, double scale);
+
+//  Build an undirected graph from the same directed DAG model by ignoring
+//  edge directions. This matches the lab wording: the undirected graph is
+//  obtained from the generated oriented graph. Because the directed graph may
+//  contain extra forward edges, the undirected version is connected and may
+//  contain cycles, so MST algorithms are non-trivial.
 // ─────────────────────────────────────────────────────────────────────────────
 static Graph buildUndirectedGraph(int n) {
-    Graph g(n, false);
-    if (n <= 1) return g;
-    if (n == 2) { g.addEdge(0, 1); return g; }
+    Graph dag = buildDirectedDAG(n, EXTRA_EDGE_SCALE_UNDIRECTED);
+    Graph undirected(n, false);
 
-    std::vector<int> capacity = generateDegreeSequence(n);
-    auto& rng = getRng();
+    for (int u = 0; u < n; u++)
+        for (int v = 0; v < n; v++)
+            if (dag.hasEdge(u, v))
+                undirected.addEdge(u, v);
 
-    // NEW: renamed to inGraph — tracks vertices already added to the graph
-    std::vector<int> inGraph;
-    inGraph.reserve(n);
-    inGraph.push_back(0);
-
-    std::vector<int> order(n - 1);
-    std::iota(order.begin(), order.end(), 1);
-    std::shuffle(order.begin(), order.end(), rng);
-
-    for (int newV : order) {
-        int totalCap = 0;
-        for (int v : inGraph) totalCap += std::max(0, capacity[v]);
-
-        int parent;
-        if (totalCap <= 0) {
-            std::uniform_int_distribution<int> upick(0, (int)inGraph.size() - 1);
-            parent = inGraph[upick(rng)];
-        } else {
-            std::uniform_int_distribution<int> roll(1, totalCap);
-            int r = roll(rng), cum = 0;
-            parent = inGraph[0];
-            for (int v : inGraph) {
-                cum += std::max(0, capacity[v]);
-                if (r <= cum) { parent = v; break; }
-            }
-        }
-
-        g.addEdge(parent, newV);
-        capacity[parent]--;
-        capacity[newV]--;
-        inGraph.push_back(newV);
-    }
-
-    return g;
+    return undirected;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,7 +57,7 @@ static Graph buildUndirectedGraph(int n) {
 //
 //  4. Fill remaining out-degree budget per vertex with random forward edges.
 // ─────────────────────────────────────────────────────────────────────────────
-static Graph buildDirectedDAG(int n, double scale = EXTRA_EDGE_SCALE_DIRECTED) {
+static Graph buildDirectedDAG(int n, double scale) {
     Graph g(n, true);
     if (n <= 1) return g;
     if (n == 2) { g.addEdge(0, 1); return g; }

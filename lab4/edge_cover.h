@@ -9,9 +9,9 @@ struct EdgeCoverResult {
 };
 
 // Minimum edge cover via:
-//   1. Find maximum matching M (BFS augmenting paths, works on bipartite/trees)
+//   1. Find maximum matching M (Edmonds blossom, general undirected graph)
 //   2. For each unmatched vertex add any incident edge
-//   |min cover| = n - |M|   (König-Egerváry for bipartite; approximate for general)
+//   |min cover| = n - |M| for graphs without isolated vertices
 //
 // useMST: if true, work on mstEdges (a tree, which is always bipartite).
 //         if false, work on the full undirected graph with weight matrix W.

@@ -5,6 +5,7 @@
 #include <cmath>
 #include "graph.h"
 #include "dag_generator.h"
+#include "weight_matrix.h"
 #include "eccentricity.h"
 #include "shimbell.h"
 #include "path_counter.h"
@@ -12,28 +13,27 @@
 #include "floyd_warshall.h"
 #include "ford_fulkerson.h"
 #include "min_cost_flow.h"
-#include "kirchhoff.h"
 #include "boruvka.h"
-#include "prufer.h"
 #include "edge_cover.h"
+#include "kirchhoff.h"
+#include "prufer.h"
+
 
 // ── Global state ──────────────────────────────────────────────────────────────
 static Graph  gGraph;
 static bool   gGraphReady = false;
 
-// Lab 1 / Lab 2 weight matrices
-static Matrix gWeightMatrix;        // Shimbell weight matrix
+// Shared weight matrix (used by Lab 1 Shimbell, Lab 2 Floyd-Warshall, Lab 4 MST)
+static Matrix gWeightMatrix;
 static bool   gWeightReady = false;
 
-static std::vector<std::vector<double>> gFWWeightMatrix;
-static bool gFWWeightReady = false;
+// static std::vector<std::vector<double>> gFWWeightMatrix;  // removed: FW now uses gWeightMatrix directly
+// static bool gFWWeightReady = false;
 
 // Lab 3
-static std::vector<std::vector<int>> gCapacity;
-static std::vector<std::vector<int>> gCostMat;
+static std::vector<std::vector<int>> gCapMatrix;
+static std::vector<std::vector<int>> gCostMatrix;
 static bool gFlowMatricesReady = false;
-static FFResult  gFFResult;
-static bool      gFFDone = false;
 
 // Lab 4
 static BoruvkaResult gMST;
@@ -68,6 +68,18 @@ static void requireFlowMatrices() {
 static void requireMST() {
     std::cout << "  Error: No MST computed. Use option 13 (Boruvka) first.\n";
 }
+static bool requireLab4Undirected() {
+    if (!gGraphReady) {
+        requireGraph();
+        return false;
+    }
+    if (gGraph.directed) {
+        std::cout << "  Error: Lab 4 requires an undirected graph.\n"
+                  << "  Please generate an undirected graph (option 1, choose 2).\n";
+        return false;
+    }
+    return true;
+}
 
 // ── 1. Generate graph ─────────────────────────────────────────────────────────
 void menuGenerateGraph() {
@@ -78,9 +90,7 @@ void menuGenerateGraph() {
     gGraph = generateDAG(n, directed);
     gGraphReady        = true;
     gWeightReady       = false;
-    gFWWeightReady     = false;
     gFlowMatricesReady = false;
-    gFFDone            = false;
     gMSTReady          = false;
     gPruferReady       = false;
     gGraph.printAdjMatrix();
@@ -89,7 +99,7 @@ void menuGenerateGraph() {
     std::cout << ".\n  Generate weight matrix with option 3.\n";
 }
 
-// ── 3. Generate weight matrix (Shimbell) ─────────────────────────────────────
+// ── 3. Generate weight matrix (shared) ───────────────────────────────────────
 void menuGenerateWeightMatrix() {
     if (!gGraphReady) { requireGraph(); return; }
     std::cout << "  Weight mode:\n    1. Positive only\n    2. Negative only\n    3. Mixed\n";
@@ -188,34 +198,25 @@ void menuDFS() {
 
 // ── 8. Floyd-Warshall ─────────────────────────────────────────────────────────
 void menuFloydWarshall() {
-    if (!gGraphReady) { requireGraph(); return; }
+    if (!gGraphReady)  { requireGraph();  return; }
+    if (!gWeightReady) { requireWeight(); return; }
 
-    if (gFWWeightReady) {
-        std::cout << "  A Floyd-Warshall weight matrix already exists.\n"
-                  << "    1. Reuse it\n    2. Generate a new one\n";
-        if (readInt("  Choose [1/2]: ") != 1) gFWWeightReady = false;
-    }
-    if (!gFWWeightReady) {
-        std::cout << "  Weight mode:\n"
-                  << "    1. Positive only\n"
-                  << "    2. Negative only\n"
-                  << "    3. Mixed\n";
-        int wc = readInt("  Choose [1/2/3]: ");
-        int mode = (wc == 2) ? 1 : (wc == 3) ? 2 : 0;
-        gFWWeightMatrix = generateWeightMatrix(gGraph, mode);
-        gFWWeightReady  = true;
-    }
+    // Build FW matrix from shared weight matrix: Shimbell has INF on diagonal,
+    // Floyd-Warshall needs 0 there.
+    const int n = gGraph.n;
+    std::vector<std::vector<double>> fw(gWeightMatrix);
+    for (int i = 0; i < n; i++) fw[i][i] = 0.0;
 
     int src = readInt("  Source vertex: ") - 1;
     int dst = readInt("  Destination vertex: ") - 1;
-    if (src < 0 || src >= gGraph.n || dst < 0 || dst >= gGraph.n) {
+    if (src < 0 || src >= n || dst < 0 || dst >= n) {
         std::cout << "  Vertex out of range.\n"; return;
     }
-    FloydResult res = floydWarshall(gGraph, gFWWeightMatrix);
-    printFloydResult(res, gFWWeightMatrix, gGraph.n, src, dst);
+    FloydResult res = floydWarshall(gGraph, fw);
+    printFloydResult(res, fw, n, src, dst);
 }
 
-// ── 9. Generate capacity and cost matrices ────────────────────────────────────
+// ── 9. Generate capacity and cost matrices (Lab 3) ────────────────────────────
 void menuGenerateFlowMatrices() {
     if (!gGraphReady) { requireGraph(); return; }
     if (!gGraph.directed) {
@@ -223,17 +224,32 @@ void menuGenerateFlowMatrices() {
                   << "  Please generate a directed graph (option 1, choose 1).\n";
         return;
     }
-    gCapacity          = generateCapacityMatrix(gGraph);
-    gCostMat           = generateCostMatrix(gGraph);
+    gCapMatrix  = generateCapacityMatrix(gGraph);
+    gCostMatrix = generateCostMatrix(gGraph);
     gFlowMatricesReady = true;
-    gFFDone            = false;
-    std::cout << "  Capacity and cost matrices generated.\n";
-    printCapacityMatrix(gCapacity, gGraph.n);
-    printCostMatrix(gCostMat, gGraph.n);
+    const int n = gGraph.n;
+    printCapacityMatrix(gCapMatrix, n);
+    printCostMatrix(gCostMatrix, n);
+    // Show out-degree / in-degree to help pick source and sink
+    std::cout << "\n  Vertex degrees (to help choose source / sink):\n";
+    std::cout << "    Vertex | Out-degree | In-degree\n";
+    std::cout << "    " << std::string(34, '-') << "\n";
+    for (int i = 0; i < n; i++) {
+        int out = 0, in = 0;
+        for (int j = 0; j < n; j++) {
+            if (gCapMatrix[i][j] > 0) out++;
+            if (gCapMatrix[j][i] > 0) in++;
+        }
+        std::cout << "      " << std::setw(3) << i+1
+                  << "   |    " << std::setw(3) << out
+                  << "     |   " << std::setw(3) << in << "\n";
+    }
+    std::cout << "  Good source: high out-degree, low in-degree.\n";
+    std::cout << "  Good sink:   high in-degree,  low out-degree.\n";
 }
 
-// ── 10. Max flow: Ford-Fulkerson ──────────────────────────────────────────────
-void menuMaxFlow() {
+// ── 10. Ford-Fulkerson ────────────────────────────────────────────────────────
+void menuFordFulkerson() {
     if (!gGraphReady)        { requireGraph();        return; }
     if (!gFlowMatricesReady) { requireFlowMatrices(); return; }
     const int n = gGraph.n;
@@ -242,10 +258,17 @@ void menuMaxFlow() {
     if (src < 0 || src >= n || dst < 0 || dst >= n) {
         std::cout << "  Vertex out of range.\n"; return;
     }
-    std::cout << "\n  Augmenting paths:\n";
-    gFFResult = fordFulkerson(n, gCapacity, src, dst);
-    gFFDone   = true;
-    printFFResult(gFFResult, gCapacity, n);
+    if (src == dst) {
+        std::cout << "  Source and sink must be different vertices.\n"; return;
+    }
+    FFResult res = fordFulkerson(n, gCapMatrix, src, dst);
+    if (res.maxFlow == 0)
+        std::cout << "  No path exists from vertex " << src+1 << " to vertex " << dst+1
+                  << ".\n  Max flow = 0. Choose a different source/sink pair.\n"
+                  << "  Hint: pick a vertex with only outgoing edges as source,\n"
+                  << "        and a vertex with only incoming edges as sink.\n";
+    else
+        printFFResult(res, gCapMatrix, n);
 }
 
 // ── 11. Min-cost flow ─────────────────────────────────────────────────────────
@@ -258,68 +281,56 @@ void menuMinCostFlow() {
     if (src < 0 || src >= n || dst < 0 || dst >= n) {
         std::cout << "  Vertex out of range.\n"; return;
     }
-    std::cout << "\n  Computing max flow (silent)...\n";
-    MCFResult res = minCostFlow(n, gCapacity, gCostMat, src, dst);
-    printMCFResult(res, gCapacity, gCostMat, n);
+    if (src == dst) {
+        std::cout << "  Source and sink must be different vertices.\n"; return;
+    }
+    MCFResult res = minCostFlow(n, gCapMatrix, gCostMatrix, src, dst);
+    printMCFResult(res, gCapMatrix, gCostMatrix, n);
 }
 
-// ── 12. Kirchhoff: count spanning trees ───────────────────────────────────────
+// ── 12. Kirchhoff (spanning tree count) ──────────────────────────────────────
 void menuKirchhoff() {
-    if (!gGraphReady) { requireGraph(); return; }
+    if (!requireLab4Undirected()) { return; }
     long long count = countSpanningTrees(gGraph);
     printKirchhoffResult(gGraph, count);
 }
 
-// ── 13. Borůvka: minimum spanning tree ───────────────────────────────────────
+// ── 13. Boruvka (MST) ─────────────────────────────────────────────────────────
 void menuBoruvka() {
-    if (!gGraphReady)  { requireGraph();  return; }
+    if (!requireLab4Undirected()) { return; }
     if (!gWeightReady) { requireWeight(); return; }
-    std::cout << "\n  Running Boruvka's algorithm:\n";
-    gMST      = boruvka(gGraph, gWeightMatrix);
-    gMSTReady = true;
+    gMST = boruvka(gGraph, gWeightMatrix);
+    gMSTReady    = true;
     gPruferReady = false;
     printBoruvkaResult(gMST);
 }
 
-// ── 14. Prüfer encode ─────────────────────────────────────────────────────────
-void menuPruferEncode() {
-    if (!gMSTReady) { requireMST(); return; }
-    const int n = gGraph.n;
-    if (n < 2) { std::cout << "  Need at least 2 vertices.\n"; return; }
-    std::cout << "\n  Prufer encoding steps:\n";
-    gPrufer      = pruferEncode(gMST.edges, n);
-    gPruferReady = true;
-    printPruferResult(gPrufer, n);
+// ── 14. Edge cover ────────────────────────────────────────────────────────────
+void menuEdgeCover() {
+    if (!requireLab4Undirected()) { return; }
+    if (!gWeightReady) { requireWeight(); return; }
+    std::cout << "  Work on:\n    1. MST (requires Boruvka, option 13)\n    2. Full graph\n";
+    bool useMST = (readInt("  Choose [1/2]: ") == 1);
+    if (useMST && !gMSTReady) { requireMST(); return; }
+    EdgeCoverResult res = minEdgeCover(gGraph, gWeightMatrix, useMST,
+                                       useMST ? gMST.edges : std::vector<MSTEdge>{});
+    printEdgeCoverResult(res);
 }
 
-// ── 15. Prüfer decode ─────────────────────────────────────────────────────────
-void menuPruferDecode() {
-    if (!gPruferReady) {
-        std::cout << "  Error: No Prufer code stored. Use option 14 first.\n";
+// ── 15. Prufer encode / decode ────────────────────────────────────────────────
+void menuPrufer() {
+    if (!requireLab4Undirected()) { return; }
+    if (!gMSTReady) { requireMST(); return; }
+    if ((int)gMST.edges.size() != gGraph.n - 1) {
+        std::cout << "  Error: Prüfer coding requires a spanning tree with n-1 edges.\n"
+                  << "  Re-run Boruvka on a connected undirected weighted graph.\n";
         return;
     }
-    const int n = gGraph.n;
-    std::cout << "\n  Prufer decoding steps:\n";
-    auto edges = pruferDecode(gPrufer.code, gPrufer.weights, n);
-    printDecodedTree(edges);
-}
-
-// ── 16. Minimum edge cover ────────────────────────────────────────────────────
-void menuEdgeCover() {
-    if (!gGraphReady)  { requireGraph();  return; }
-    if (!gWeightReady) { requireWeight(); return; }
-
-    std::cout << "  Apply to:\n"
-              << "    1. Original graph (undirected view)\n"
-              << "    2. MST (Boruvka result)\n";
-    int choice = readInt("  Choose [1/2]: ");
-    bool useMST = (choice == 2);
-
-    if (useMST && !gMSTReady) { requireMST(); return; }
-
-    EdgeCoverResult res = minEdgeCover(gGraph, gWeightMatrix,
-                                       useMST, gMST.edges);
-    printEdgeCoverResult(res);
+    gPrufer = pruferEncode(gMST.edges, gGraph.n);
+    gPruferReady = true;
+    printPruferResult(gPrufer, gGraph.n);
+    auto decoded = pruferDecode(gPrufer.code, gPrufer.weights, gGraph.n);
+    printDecodedTree(decoded);
 }
 
 // ── Menu ──────────────────────────────────────────────────────────────────────
@@ -337,16 +348,15 @@ void printMenu() {
               << "  =====Lab 2=====\n"
               << "  7. DFS traversal\n"
               << "  8. Shortest path: Floyd-Warshall\n"
-              << "  =====Lab 3: Flows=====\n"
+              << "  =====Lab 3=====\n"
               << "  9.  Generate capacity and cost matrices\n"
-              << "  10. Maximum flow (Ford-Fulkerson)\n"
-              << "  11. Minimum-cost flow  [theta = floor(2/3 * maxFlow)]\n"
-              << "  =====Lab 4: Trees=====\n"
-              << "  12. Count spanning trees (Kirchhoff theorem)\n"
-              << "  13. Minimum spanning tree (Boruvka)\n"
-              << "  14. Encode MST as Prufer code with weights\n"
-              << "  15. Decode Prufer code, restore weights\n"
-              << "  16. Minimum edge cover\n"
+              << "  10. Max flow: Ford-Fulkerson\n"
+              << "  11. Min-cost flow\n"
+              << "  =====Lab 4=====\n"
+              << "  12. Kirchhoff: count spanning trees\n"
+              << "  13. Boruvka: minimum spanning tree\n"
+              << "  14. Minimum edge cover\n"
+              << "  15. Prufer encode / decode\n"
               << "  0.  Exit\n"
               << "----------------------------------------\n";
 }
@@ -369,15 +379,14 @@ int main() {
             case 5:  menuShimbell();             break;
             case 6:  menuPaths();                break;
             case 7:  menuDFS();                  break;
-            case 8:  menuFloydWarshall();         break;
+            case 8:  menuFloydWarshall();        break;
             case 9:  menuGenerateFlowMatrices(); break;
-            case 10: menuMaxFlow();              break;
+            case 10: menuFordFulkerson();        break;
             case 11: menuMinCostFlow();          break;
             case 12: menuKirchhoff();            break;
             case 13: menuBoruvka();              break;
-            case 14: menuPruferEncode();         break;
-            case 15: menuPruferDecode();         break;
-            case 16: menuEdgeCover();            break;
+            case 14: menuEdgeCover();            break;
+            case 15: menuPrufer();               break;
             case 0:  std::cout << "  Goodbye.\n"; break;
             default: std::cout << "  Unknown option.\n"; break;
         }

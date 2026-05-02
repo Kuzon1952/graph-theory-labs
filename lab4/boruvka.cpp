@@ -3,74 +3,81 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <map>
 #include <numeric>
-
-// Union-Find with path compression
-static std::vector<int> parent, rank_;
-
-static void ufInit(int n) {
-    parent.resize(n);
-    rank_.assign(n, 0);
-    std::iota(parent.begin(), parent.end(), 0);
-}
-
-static int ufFind(int x) {
-    if (parent[x] != x) parent[x] = ufFind(parent[x]);
-    return parent[x];
-}
-
-static bool ufUnion(int a, int b) {
-    a = ufFind(a); b = ufFind(b);
-    if (a == b) return false;
-    if (rank_[a] < rank_[b]) std::swap(a, b);
-    parent[b] = a;
-    if (rank_[a] == rank_[b]) rank_[a]++;
-    return true;
-}
+#include <functional>
 
 BoruvkaResult boruvka(const Graph& g,
                       const std::vector<std::vector<double>>& W) {
     const int n = g.n;
-    ufInit(n);
+
+    // Local Union-Find
+    std::vector<int> parent(n), rnk(n, 0);
+    std::iota(parent.begin(), parent.end(), 0);
+
+    std::function<int(int)> find = [&](int x) -> int {
+        if (parent[x] != x) parent[x] = find(parent[x]);
+        return parent[x];
+    };
+    auto unite = [&](int a, int b) -> bool {
+        a = find(a); b = find(b);
+        if (a == b) return false;
+        if (rnk[a] < rnk[b]) std::swap(a, b);
+        parent[b] = a;
+        if (rnk[a] == rnk[b]) rnk[a]++;
+        return true;
+    };
+
+    // Print current component partition
+    auto printComps = [&]() {
+        std::map<int, std::vector<int>> comps;
+        for (int i = 0; i < n; i++) comps[find(i)].push_back(i);
+        std::cout << "  Components:";
+        for (auto& [root, members] : comps) {
+            std::cout << " {";
+            for (int k = 0; k < (int)members.size(); k++) {
+                if (k) std::cout << ",";
+                std::cout << members[k] + 1;
+            }
+            std::cout << "}";
+        }
+        std::cout << "\n";
+    };
 
     std::vector<MSTEdge> mst;
     int round = 0;
 
-    // Repeat until we have n-1 edges (MST complete) or no progress
     while ((int)mst.size() < n - 1) {
         round++;
         std::cout << "  --- Round " << round << " ---\n";
+        printComps();
 
-        // For each component: best outgoing edge index (u*n+v) and its weight
+        // For each component: find cheapest outgoing edge
         std::vector<int>    bestU(n, -1), bestV(n, -1);
         std::vector<double> bestW(n, SHIMBELL_INF);
 
-        // Scan all undirected edges
         for (int u = 0; u < n; u++) {
             for (int v = u + 1; v < n; v++) {
-                // Undirected edge exists if adj[u][v] or adj[v][u]
                 bool edge = g.hasEdge(u, v) || g.hasEdge(v, u);
                 if (!edge) continue;
-                double w = W[u][v] < SHIMBELL_INF / 2 ? W[u][v]
+                // For undirected, W[u][v] == W[v][u] after the weight fix.
+                // Take whichever direction is valid.
+                double w = (W[u][v] < SHIMBELL_INF / 2) ? W[u][v]
                          : (W[v][u] < SHIMBELL_INF / 2 ? W[v][u] : SHIMBELL_INF);
                 if (w >= SHIMBELL_INF / 2) continue;
 
-                int cu = ufFind(u), cv = ufFind(v);
-                if (cu == cv) continue;  // same component
+                int cu = find(u), cv = find(v);
+                if (cu == cv) continue;
 
-                // Update best for component of u (tie-break by smaller u*n+v)
+                // Update best for component of u
                 if (w < bestW[cu] ||
                     (w == bestW[cu] && u * n + v < bestU[cu] * n + bestV[cu])) {
-                    bestW[cu] = w;
-                    bestU[cu] = u;
-                    bestV[cu] = v;
+                    bestW[cu] = w; bestU[cu] = u; bestV[cu] = v;
                 }
                 // Update best for component of v
                 if (w < bestW[cv] ||
                     (w == bestW[cv] && u * n + v < bestU[cv] * n + bestV[cv])) {
-                    bestW[cv] = w;
-                    bestU[cv] = u;
-                    bestV[cv] = v;
+                    bestW[cv] = w; bestU[cv] = u; bestV[cv] = v;
                 }
             }
         }
@@ -80,7 +87,7 @@ BoruvkaResult boruvka(const Graph& g,
         for (int c = 0; c < n; c++) {
             if (bestU[c] == -1) continue;
             int u = bestU[c], v = bestV[c];
-            if (ufUnion(u, v)) {
+            if (unite(u, v)) {
                 double w = bestW[c];
                 mst.push_back({ u, v, w });
                 std::cout << "    Add edge (" << u + 1 << ", " << v + 1
@@ -88,7 +95,10 @@ BoruvkaResult boruvka(const Graph& g,
                 added = true;
             }
         }
-        if (!added) break;  // graph not connected
+        if (!added) {
+            std::cout << "  Warning: no safe edges found — graph may be disconnected.\n";
+            break;
+        }
     }
 
     double total = 0.0;
@@ -102,9 +112,11 @@ void printBoruvkaResult(const BoruvkaResult& res) {
     std::cout << "  BORUVKA MST RESULT\n";
     std::cout << "  " << sep << "\n";
     std::cout << "\n  MST edges:\n";
+    std::cout << "    Arc        weight\n";
+    std::cout << "    " << std::string(22, '-') << "\n";
     for (auto& e : res.edges)
-        std::cout << "    (" << e.u + 1 << ", " << e.v + 1
-                  << ")  weight = " << e.weight << "\n";
+        std::cout << "    (" << e.u + 1 << " -> " << e.v + 1
+                  << ")    " << e.weight << "\n";
     std::cout << "\n  Total MST weight = " << res.totalWeight << "\n";
     std::cout << "\n  " << sep << "\n";
 }

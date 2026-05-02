@@ -6,54 +6,119 @@
 #include <queue>
 #include <algorithm>
 
-// BFS-based maximum matching (augmenting paths).
-// Works correctly for bipartite graphs (trees are always bipartite).
-// For general graphs it is a maximal matching (may not be maximum for odd cycles).
-static int maxMatching(const std::vector<std::vector<int>>& adj, int n,
-                       std::vector<int>& match) {
-    match.assign(n, -1);
-    int result = 0;
+// Edmonds blossom maximum matching for a general undirected graph.
+// Minimum edge cover size is n - |maximum matching| for graphs without isolated
+// vertices, so this keeps the full-graph case correct even when it is not a tree.
+class GeneralMatching {
+public:
+    GeneralMatching(const std::vector<std::vector<int>>& adj, int n)
+        : adj(adj), n(n), match(n, -1), parent(n), base(n),
+          used(n), blossom(n) {}
 
-    for (int start = 0; start < n; start++) {
-        if (match[start] != -1) continue;
+    int run(std::vector<int>& outMatch) {
+        int result = 0;
+        for (int root = 0; root < n; root++) {
+            if (match[root] != -1) continue;
+            int endpoint = findAugmentingPath(root);
+            if (endpoint == -1) continue;
 
-        // BFS to find an augmenting path from 'start'
-        std::vector<int> prev(n, -2);   // -2 = unvisited
-        prev[start] = -1;
-        std::queue<int> q;
-        q.push(start);
-        int endpoint = -1;
+            while (endpoint != -1) {
+                int pv = parent[endpoint];
+                int next = match[pv];
+                match[endpoint] = pv;
+                match[pv] = endpoint;
+                endpoint = next;
+            }
+            result++;
+        }
+        outMatch = match;
+        return result;
+    }
 
-        while (!q.empty() && endpoint == -1) {
-            int u = q.front(); q.pop();
-            for (int v = 0; v < n; v++) {
-                if (!adj[u][v] || prev[v] != -2) continue;
-                prev[v] = u;
-                if (match[v] == -1) {
-                    endpoint = v;
-                    break;
+private:
+    const std::vector<std::vector<int>>& adj;
+    int n;
+    std::vector<int> match;
+    std::vector<int> parent;
+    std::vector<int> base;
+    std::vector<bool> used;
+    std::vector<bool> blossom;
+    std::queue<int> q;
+
+    int lca(int a, int b) {
+        std::vector<bool> seen(n, false);
+        while (true) {
+            a = base[a];
+            seen[a] = true;
+            if (match[a] == -1) break;
+            a = parent[match[a]];
+        }
+        while (true) {
+            b = base[b];
+            if (seen[b]) return b;
+            b = parent[match[b]];
+        }
+    }
+
+    void markPath(int v, int b, int child) {
+        while (base[v] != b) {
+            blossom[base[v]] = true;
+            blossom[base[match[v]]] = true;
+            parent[v] = child;
+            child = match[v];
+            v = parent[match[v]];
+        }
+    }
+
+    int findAugmentingPath(int root) {
+        std::fill(used.begin(), used.end(), false);
+        std::fill(parent.begin(), parent.end(), -1);
+        for (int i = 0; i < n; i++) base[i] = i;
+
+        q = std::queue<int>();
+        q.push(root);
+        used[root] = true;
+
+        while (!q.empty()) {
+            int v = q.front();
+            q.pop();
+
+            for (int u = 0; u < n; u++) {
+                if (!adj[v][u] || base[v] == base[u] || match[v] == u) continue;
+
+                if (u == root || (match[u] != -1 && parent[match[u]] != -1)) {
+                    int curBase = lca(v, u);
+                    std::fill(blossom.begin(), blossom.end(), false);
+                    markPath(v, curBase, u);
+                    markPath(u, curBase, v);
+
+                    for (int i = 0; i < n; i++) {
+                        if (!blossom[base[i]]) continue;
+                        base[i] = curBase;
+                        if (!used[i]) {
+                            used[i] = true;
+                            q.push(i);
+                        }
+                    }
+                } else if (parent[u] == -1) {
+                    parent[u] = v;
+                    if (match[u] == -1)
+                        return u;
+
+                    int next = match[u];
+                    used[next] = true;
+                    q.push(next);
                 }
-                // Go through matched partner of v
-                int w = match[v];
-                prev[w] = v;
-                q.push(w);
             }
         }
 
-        if (endpoint == -1) continue;
-
-        // Augment along found path (check v != -1 before accessing prev[v])
-        int v = endpoint;
-        while (v != -1 && prev[v] != -1) {
-            int u  = prev[v];
-            int pu = prev[u];    // may be -1 at start vertex
-            match[v] = u;
-            match[u] = v;
-            v = pu;
-        }
-        result++;
+        return -1;
     }
-    return result;
+};
+
+static int maxMatching(const std::vector<std::vector<int>>& adj, int n,
+                       std::vector<int>& match) {
+    return GeneralMatching(adj, n).run(match);
 }
 
 EdgeCoverResult minEdgeCover(const Graph& g,
@@ -122,11 +187,14 @@ void printEdgeCoverResult(const EdgeCoverResult& res) {
     std::cout << "\n  " << sep << "\n";
     std::cout << "  MINIMUM EDGE COVER\n";
     std::cout << "  " << sep << "\n";
-    std::cout << "\n  Maximum matching size: " << res.matchingSize << "\n";
-    std::cout << "  Edge cover size:       " << res.cover.size() << "\n";
+    std::cout << "\n  Maximum matching  |M| = " << res.matchingSize << "\n";
+    std::cout << "  Min edge cover   |C| = " << res.cover.size()
+              << "  (= n - |M| when no isolated vertices)\n";
     std::cout << "\n  Cover edges:\n";
+    std::cout << "    Arc        weight\n";
+    std::cout << "    " << std::string(22, '-') << "\n";
     for (auto& e : res.cover)
-        std::cout << "    (" << e.u + 1 << ", " << e.v + 1
-                  << ")  weight=" << e.weight << "\n";
+        std::cout << "    (" << e.u + 1 << " -- " << e.v + 1
+                  << ")    " << e.weight << "\n";
     std::cout << "\n  " << sep << "\n";
 }

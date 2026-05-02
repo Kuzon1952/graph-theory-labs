@@ -1,13 +1,8 @@
 #pragma once
 #include "graph.h"
+#include "weight_matrix.h"  // Matrix, WeightMode, generateWeightMatrix (shared)
 #include <vector>
 
-// Weight matrix: 0 on diagonal, SHIMBELL_INF for no edge, random weight for edges.
-//   mode 0 (positive) : weights in [1, 20]
-//   mode 1 (negative) : weights in [-20, -1]
-//   mode 2 (mixed)    : each edge independently positive [1,20] or negative [-20,-1]
-std::vector<std::vector<double>>
-generateWeightMatrix(const Graph& g, int mode);
 
 // Result bundle returned by floydWarshall()
 struct FloydResult {

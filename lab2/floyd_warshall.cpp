@@ -2,42 +2,10 @@
 #include "constants.h"
 #include <iostream>
 #include <iomanip>
-#include <random>
+// #include <random>    // no longer needed here — moved to shared/weight_matrix.cpp
 #include <vector>
 #include <algorithm>
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Weight matrix generation
-// ─────────────────────────────────────────────────────────────────────────────
-std::vector<std::vector<double>>
-generateWeightMatrix(const Graph& g, int mode) {
-    static std::mt19937 rng(std::random_device{}());
-    const int n = g.n;
-    std::vector<std::vector<double>> W(n, std::vector<double>(n, SHIMBELL_INF));
-    for (int i = 0; i < n; i++) W[i][i] = 0.0;
-
-    std::uniform_int_distribution<int> posDist(1, 20);
-    std::uniform_int_distribution<int> negDist(1, 20);
-    std::uniform_int_distribution<int> coinFlip(0, 1);
-
-    for (int u = 0; u < n; u++) {
-        for (int v = 0; v < n; v++) {
-            if (u == v) continue;
-            if (!g.hasEdge(u, v)) continue;
-            int w;
-            if (mode == 1) {
-                w = -negDist(rng);
-            } else if (mode == 2) {
-                w = posDist(rng);
-                if (coinFlip(rng)) w = -w;
-            } else {
-                w = posDist(rng);
-            }
-            W[u][v] = static_cast<double>(w);
-        }
-    }
-    return W;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Print helpers

@@ -1,17 +1,8 @@
 #pragma once
 #include "graph.h"
 #include "constants.h"
+#include "weight_matrix.h"  // Matrix, WeightMode, generateWeightMatrix (shared)
 #include <vector>
-
-using Matrix = std::vector<std::vector<double>>;
-
-enum WeightMode { POSITIVE, NEGATIVE, MIXED };
-
-// Generate a weight matrix for the graph's existing edges using the Normal
-// distribution.  Non-edges are set to +INF (for min) and -INF (for max).
-// Diagonal is always 0 (self-loop of cost 0, which lets Shimbell represent
-// "at most k steps" instead of "exactly k steps").
-Matrix generateWeightMatrix(const Graph& g, WeightMode mode);
 
 // Shimbell's algorithm.
 //   k == 0  -> identity matrix (diagonal 0, off-diagonal +INF / -INF)

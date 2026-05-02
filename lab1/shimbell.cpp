@@ -1,44 +1,10 @@
 #include "shimbell.h"
-#include "distribution.h"
-#include <cmath>
+// #include "distribution.h"  // no longer needed here — moved to shared/weight_matrix.cpp
+// #include <cmath>           // no longer needed here
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
-#include <sstream>
 
-// ── Weight generation ─────────────────────────────────────────────────────────
-
-static double sampleWeight(WeightMode mode) {
-    // Scale: multiply N(0,1) by 5 and round, keep away from zero.
-    double raw = normalSample(12) * 5.0;
-    int w = static_cast<int>(std::round(raw));
-
-    switch (mode) {
-        case POSITIVE:
-            return (w <= 0) ? 1 : w;   // guarantee > 0
-        case NEGATIVE:
-            return (w >= 0) ? -1 : w;  // guarantee < 0
-        case MIXED:
-        default:
-            return (w == 0) ? 1 : w;   // just avoid zero
-    }
-}
-
-Matrix generateWeightMatrix(const Graph& g, WeightMode mode) {
-    int n = g.n;
-    // Non-edges INF depending on min/max context.
-    // We store SHIMBELL_INF; when used for max we negate on the fly inside shimbell().
-    Matrix W(n, std::vector<double>(n, SHIMBELL_INF));
-
-    for (int i = 0; i < n; i++) {
-        W[i][i] = SHIMBELL_INF;   // no self-loop — exact k-step semantics
-        for (int j = 0; j < n; j++) {
-            if (i != j && g.hasEdge(i, j))
-                W[i][j] = sampleWeight(mode);
-        }
-    }
-    return W;
-}
 
 // ── Tropical matrix multiply ──────────────────────────────────────────────────
 
@@ -150,8 +116,3 @@ void printMatrix(const Matrix& M) {
     }
 }
 
-/*
-todo solved:
-i. need to increse the parametter so that i can get more edges in the matrix
-ii. in the shimbell : problem -> 0 also counting but it should not be
-*/

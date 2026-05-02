@@ -11,10 +11,10 @@ add_executable(lab_combined
         ${CMAKE_SOURCE_DIR}/lab3/ford_fulkerson.cpp
         ${CMAKE_SOURCE_DIR}/lab3/min_cost_flow.cpp
         # Lab 4
-        ${CMAKE_SOURCE_DIR}/lab4/kirchhoff.cpp
         ${CMAKE_SOURCE_DIR}/lab4/boruvka.cpp
-        ${CMAKE_SOURCE_DIR}/lab4/prufer.cpp
         ${CMAKE_SOURCE_DIR}/lab4/edge_cover.cpp
+        ${CMAKE_SOURCE_DIR}/lab4/kirchhoff.cpp
+        ${CMAKE_SOURCE_DIR}/lab4/prufer.cpp
 )
 
 target_include_directories(lab_combined PRIVATE
@@ -30,6 +30,7 @@ target_sources(lab_combined PRIVATE
         ${CMAKE_SOURCE_DIR}/shared/graph.cpp
         ${CMAKE_SOURCE_DIR}/shared/distribution.cpp
         ${CMAKE_SOURCE_DIR}/shared/dag_generator.cpp
+        ${CMAKE_SOURCE_DIR}/shared/weight_matrix.cpp
 )
 
 if(MSVC)
