@@ -15,6 +15,9 @@ add_executable(lab_combined
         ${CMAKE_SOURCE_DIR}/lab4/edge_cover.cpp
         ${CMAKE_SOURCE_DIR}/lab4/kirchhoff.cpp
         ${CMAKE_SOURCE_DIR}/lab4/prufer.cpp
+        # Lab 5
+        ${CMAKE_SOURCE_DIR}/lab5/eulerian.cpp
+        ${CMAKE_SOURCE_DIR}/lab5/fundamental_cutsets.cpp
 )
 
 target_include_directories(lab_combined PRIVATE
@@ -23,6 +26,7 @@ target_include_directories(lab_combined PRIVATE
         ${CMAKE_SOURCE_DIR}/lab2
         ${CMAKE_SOURCE_DIR}/lab3
         ${CMAKE_SOURCE_DIR}/lab4
+        ${CMAKE_SOURCE_DIR}/lab5
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

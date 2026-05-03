@@ -17,6 +17,8 @@
 #include "edge_cover.h"
 #include "kirchhoff.h"
 #include "prufer.h"
+#include "eulerian.h"
+#include "fundamental_cutsets.h"
 
 
 // ── Global state ──────────────────────────────────────────────────────────────
@@ -75,6 +77,18 @@ static bool requireLab4Undirected() {
     }
     if (gGraph.directed) {
         std::cout << "  Error: Lab 4 requires an undirected graph.\n"
+                  << "  Please generate an undirected graph (option 1, choose 2).\n";
+        return false;
+    }
+    return true;
+}
+static bool requireLab5Undirected() {
+    if (!gGraphReady) {
+        requireGraph();
+        return false;
+    }
+    if (gGraph.directed) {
+        std::cout << "  Error: Lab 5 requires an undirected graph.\n"
                   << "  Please generate an undirected graph (option 1, choose 2).\n";
         return false;
     }
@@ -333,6 +347,50 @@ void menuPrufer() {
     printDecodedTree(decoded);
 }
 
+// ── 16. Eulerian graph / Euler cycle ──────────────────────────────────────────
+void menuEulerianCycle() {
+    if (!requireLab5Undirected()) { return; }
+    EulerianResult res = buildEulerianCycle(gGraph);
+    printEulerianResult(res);
+}
+
+// ── 17. Fundamental cutsets (variant 36 is even) ─────────────────────────────
+void menuFundamentalCutsets() {
+    if (!requireLab5Undirected()) { return; }
+    if (!gWeightReady) { requireWeight(); return; }
+
+    std::cout << "  Building MST with Boruvka (Lab 4 algorithm)...\n";
+    gMST = boruvka(gGraph, gWeightMatrix);
+    gMSTReady = true;
+    gPruferReady = false;
+    printBoruvkaResult(gMST);
+
+    if ((int)gMST.edges.size() != gGraph.n - 1) {
+        std::cout << "  Error: fundamental cutsets require a spanning tree.\n";
+        return;
+    }
+
+    auto cutsets = buildFundamentalCutsets(gGraph, gMST.edges);
+    printFundamentalCutsets(cutsets);
+
+    int count = readInt("  Number of cutsets for symmetric difference: ");
+    if (count < 0) {
+        std::cout << "  Count must be >= 0.\n";
+        return;
+    }
+
+    std::vector<int> selected;
+    for (int i = 0; i < count; i++) {
+        int idx = readInt("  Cutset number: ");
+        if (idx < 1 || idx > (int)cutsets.size()) {
+            std::cout << "  Ignoring invalid cutset number " << idx << ".\n";
+            continue;
+        }
+        selected.push_back(idx);
+    }
+    printCutsetSymmetricDifference(cutsets, selected);
+}
+
 // ── Menu ──────────────────────────────────────────────────────────────────────
 void printMenu() {
     std::cout << "\n========================================\n"
@@ -357,6 +415,9 @@ void printMenu() {
               << "  13. Boruvka: minimum spanning tree\n"
               << "  14. Minimum edge cover\n"
               << "  15. Prufer encode / decode\n"
+              << "  =====Lab 5=====\n"
+              << "  16. Eulerian check / modify / Euler cycle\n"
+              << "  17. Fundamental cutsets from MST\n"
               << "  0.  Exit\n"
               << "----------------------------------------\n";
 }
@@ -387,6 +448,8 @@ int main() {
             case 13: menuBoruvka();              break;
             case 14: menuEdgeCover();            break;
             case 15: menuPrufer();               break;
+            case 16: menuEulerianCycle();        break;
+            case 17: menuFundamentalCutsets();   break;
             case 0:  std::cout << "  Goodbye.\n"; break;
             default: std::cout << "  Unknown option.\n"; break;
         }
