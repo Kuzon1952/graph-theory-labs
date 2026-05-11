@@ -86,6 +86,14 @@ void printFundamentalCutsets(const std::vector<FundamentalCutset>& cutsets) {
     std::cout << "  LAB 5: FUNDAMENTAL CUTSET SYSTEM (EVEN VARIANT)\n";
     std::cout << "  " << sep << "\n\n";
 
+    if (cutsets.empty()) {
+        std::cout << "  No fundamental cutsets exist.\n";
+        std::cout << "  Reason: a fundamental cutset is built for each MST edge,\n";
+        std::cout << "  and this graph has no MST edges.\n";
+        std::cout << "\n  " << sep << "\n";
+        return;
+    }
+
     for (const auto& cut : cutsets) {
         std::cout << "  Cutset " << cut.index
                   << "  for tree edge (" << D(cut.treeEdge.u)

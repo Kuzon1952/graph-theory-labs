@@ -7,17 +7,17 @@
 
 static inline int D(int v) { return v + 1; }
 
-static int degreeOf(const std::vector<std::vector<int>>& mult, int v) {
+static int degreeOf(const std::vector<std::vector<int>>& adj, int v) {
     int deg = 0;
-    for (int u = 0; u < (int)mult.size(); u++)
-        deg += mult[v][u];
+    for (int u = 0; u < (int)adj.size(); u++)
+        deg += adj[v][u];
     return deg;
 }
 
-static std::vector<int> degreesOf(const std::vector<std::vector<int>>& mult) {
-    std::vector<int> deg(mult.size(), 0);
-    for (int v = 0; v < (int)mult.size(); v++)
-        deg[v] = degreeOf(mult, v);
+static std::vector<int> degreesOf(const std::vector<std::vector<int>>& adj) {
+    std::vector<int> deg(adj.size(), 0);
+    for (int v = 0; v < (int)adj.size(); v++)
+        deg[v] = degreeOf(adj, v);
     return deg;
 }
 
@@ -29,9 +29,17 @@ static std::vector<int> oddVertices(const std::vector<int>& deg) {
     return odd;
 }
 
-static std::vector<int> bfsReachable(const std::vector<std::vector<int>>& mult,
+static bool hasAnyEdge(const std::vector<std::vector<int>>& adj) {
+    for (int i = 0; i < (int)adj.size(); i++)
+        for (int j = i + 1; j < (int)adj.size(); j++)
+            if (adj[i][j] > 0)
+                return true;
+    return false;
+}
+
+static std::vector<int> bfsReachable(const std::vector<std::vector<int>>& adj,
                                      int start) {
-    const int n = (int)mult.size();
+    const int n = (int)adj.size();
     std::vector<int> visited(n, 0);
     std::queue<int> q;
     visited[start] = 1;
@@ -41,7 +49,7 @@ static std::vector<int> bfsReachable(const std::vector<std::vector<int>>& mult,
         int v = q.front();
         q.pop();
         for (int u = 0; u < n; u++) {
-            if (mult[v][u] > 0 && !visited[u]) {
+            if (adj[v][u] > 0 && !visited[u]) {
                 visited[u] = 1;
                 q.push(u);
             }
@@ -52,8 +60,8 @@ static std::vector<int> bfsReachable(const std::vector<std::vector<int>>& mult,
 }
 
 static std::vector<std::vector<int>> connectedComponents(
-        const std::vector<std::vector<int>>& mult) {
-    const int n = (int)mult.size();
+        const std::vector<std::vector<int>>& adj) {
+    const int n = (int)adj.size();
     std::vector<int> used(n, 0);
     std::vector<std::vector<int>> comps;
 
@@ -70,7 +78,7 @@ static std::vector<std::vector<int>> connectedComponents(
             q.pop();
             comp.push_back(v);
             for (int u = 0; u < n; u++) {
-                if (mult[v][u] > 0 && !used[u]) {
+                if (adj[v][u] > 0 && !used[u]) {
                     used[u] = 1;
                     q.push(u);
                 }
@@ -82,52 +90,92 @@ static std::vector<std::vector<int>> connectedComponents(
     return comps;
 }
 
-static bool isConnected(const std::vector<std::vector<int>>& mult) {
-    const int n = (int)mult.size();
+static bool isConnected(const std::vector<std::vector<int>>& adj) {
+    const int n = (int)adj.size();
     if (n <= 1) return true;
-    auto seen = bfsReachable(mult, 0);
+    auto seen = bfsReachable(adj, 0);
     return std::all_of(seen.begin(), seen.end(), [](int x) { return x != 0; });
 }
 
-static std::vector<int> shortestPath(const std::vector<std::vector<int>>& mult,
-                                     int src, int dst) {
-    const int n = (int)mult.size();
-    std::vector<int> prev(n, -1);
-    std::queue<int> q;
-    prev[src] = src;
-    q.push(src);
+static void addSimpleEdge(std::vector<std::vector<int>>& adj, int u, int v) {
+    adj[u][v] = 1;
+    adj[v][u] = 1;
+}
 
-    while (!q.empty()) {
-        int v = q.front();
-        q.pop();
-        if (v == dst) break;
-        for (int u = 0; u < n; u++) {
-            if (mult[v][u] > 0 && prev[u] == -1) {
-                prev[u] = v;
-                q.push(u);
+static void removeSimpleEdge(std::vector<std::vector<int>>& adj, int u, int v) {
+    adj[u][v] = 0;
+    adj[v][u] = 0;
+}
+
+static bool canRemoveWithoutDisconnecting(
+        const std::vector<std::vector<int>>& adj, int u, int v) {
+    if (adj[u][v] == 0) return false;
+    auto test = adj;
+    removeSimpleEdge(test, u, v);
+    return isConnected(test);
+}
+
+static bool tryEdgeSwapForOddPair(
+        std::vector<std::vector<int>>& adj,
+        int u,
+        int v,
+        EulerianResult& res) {
+    const int n = (int)adj.size();
+
+    for (int x = 0; x < n; x++) {
+        if (x == u || x == v) continue;
+
+        if (adj[u][x] > 0 && adj[v][x] == 0) {
+            addSimpleEdge(adj, v, x);
+            if (canRemoveWithoutDisconnecting(adj, u, x)) {
+                removeSimpleEdge(adj, u, x);
+                res.addedEdges.push_back({v, x});
+                res.removedEdges.push_back({u, x});
+
+                std::ostringstream add;
+                add << "Added missing edge (" << D(v) << " -- " << D(x)
+                    << ").";
+                res.log.push_back(add.str());
+
+                std::ostringstream rem;
+                rem << "Removed edge (" << D(u) << " -- " << D(x)
+                    << "); graph remains connected.";
+                res.log.push_back(rem.str());
+                return true;
             }
+            removeSimpleEdge(adj, v, x);
+        }
+
+        if (adj[v][x] > 0 && adj[u][x] == 0) {
+            addSimpleEdge(adj, u, x);
+            if (canRemoveWithoutDisconnecting(adj, v, x)) {
+                removeSimpleEdge(adj, v, x);
+                res.addedEdges.push_back({u, x});
+                res.removedEdges.push_back({v, x});
+
+                std::ostringstream add;
+                add << "Added missing edge (" << D(u) << " -- " << D(x)
+                    << ").";
+                res.log.push_back(add.str());
+
+                std::ostringstream rem;
+                rem << "Removed edge (" << D(v) << " -- " << D(x)
+                    << "); graph remains connected.";
+                res.log.push_back(rem.str());
+                return true;
+            }
+            removeSimpleEdge(adj, u, x);
         }
     }
 
-    if (prev[dst] == -1) return {};
-    std::vector<int> path;
-    for (int v = dst; v != src; v = prev[v])
-        path.push_back(v);
-    path.push_back(src);
-    std::reverse(path.begin(), path.end());
-    return path;
+    return false;
 }
 
-static void addEdge(std::vector<std::vector<int>>& mult, int u, int v) {
-    mult[u][v]++;
-    mult[v][u]++;
-}
-
-static std::vector<int> hierholzer(std::vector<std::vector<int>> mult) {
-    const int n = (int)mult.size();
+static std::vector<int> hierholzer(std::vector<std::vector<int>> adj) {
+    const int n = (int)adj.size();
     int start = 0;
     for (int i = 0; i < n; i++) {
-        if (degreeOf(mult, i) > 0) {
+        if (degreeOf(adj, i) > 0) {
             start = i;
             break;
         }
@@ -141,7 +189,7 @@ static std::vector<int> hierholzer(std::vector<std::vector<int>> mult) {
         int v = stack.back();
         int next = -1;
         for (int u = 0; u < n; u++) {
-            if (mult[v][u] > 0) {
+            if (adj[v][u] > 0) {
                 next = u;
                 break;
             }
@@ -151,8 +199,8 @@ static std::vector<int> hierholzer(std::vector<std::vector<int>> mult) {
             cycle.push_back(v);
             stack.pop_back();
         } else {
-            mult[v][next]--;
-            mult[next][v]--;
+            adj[v][next] = 0;
+            adj[next][v] = 0;
             stack.push_back(next);
         }
     }
@@ -163,21 +211,31 @@ static std::vector<int> hierholzer(std::vector<std::vector<int>> mult) {
 
 EulerianResult buildEulerianCycle(const Graph& g) {
     const int n = g.n;
-    std::vector<std::vector<int>> mult(n, std::vector<int>(n, 0));
+    std::vector<std::vector<int>> adj(n, std::vector<int>(n, 0));
 
     for (int i = 0; i < n; i++)
         for (int j = i + 1; j < n; j++)
             if (g.hasEdge(i, j) || g.hasEdge(j, i))
-                addEdge(mult, i, j);
+                addSimpleEdge(adj, i, j);
 
     EulerianResult res;
-    res.originalConnected = isConnected(mult);
-    res.originalDegrees = degreesOf(mult);
+    res.originalConnected = isConnected(adj);
+    res.originalDegrees = degreesOf(adj);
     res.originalOddVertices = oddVertices(res.originalDegrees);
-    res.originalEulerian = res.originalConnected && res.originalOddVertices.empty();
+    res.originalEulerian = res.originalConnected &&
+                           res.originalOddVertices.empty() &&
+                           hasAnyEdge(adj);
+    res.modificationPossible = true;
+
+    if (!hasAnyEdge(adj)) {
+        res.log.push_back("Graph has no edges; Euler cycle is not constructed.");
+        res.modificationPossible = false;
+        res.modifiedDegrees = res.originalDegrees;
+        return res;
+    }
 
     if (!res.originalConnected) {
-        auto comps = connectedComponents(mult);
+        auto comps = connectedComponents(adj);
         std::ostringstream os;
         os << "Graph is disconnected: " << comps.size()
            << " connected components found.";
@@ -186,7 +244,7 @@ EulerianResult buildEulerianCycle(const Graph& g) {
         for (int i = 0; i + 1 < (int)comps.size(); i++) {
             int u = comps[i][0];
             int v = comps[i + 1][0];
-            addEdge(mult, u, v);
+            addSimpleEdge(adj, u, v);
             res.addedEdges.push_back({u, v});
             std::ostringstream add;
             add << "Added edge (" << D(u) << " -- " << D(v)
@@ -195,45 +253,97 @@ EulerianResult buildEulerianCycle(const Graph& g) {
         }
     }
 
-    auto currentDegrees = degreesOf(mult);
+    auto currentDegrees = degreesOf(adj);
     auto odd = oddVertices(currentDegrees);
     if (odd.empty()) {
         res.log.push_back("All vertex degrees are even; no parity modification needed.");
     } else {
-        std::ostringstream os;
-        os << "Odd vertices paired for modification:";
-        for (int v : odd) os << " " << D(v);
-        res.log.push_back(os.str());
+        const int maxSteps = n * n + 1;
+        for (int step = 0; step < maxSteps; step++) {
+            currentDegrees = degreesOf(adj);
+            odd = oddVertices(currentDegrees);
+            if (odd.empty()) break;
 
-        for (int i = 0; i + 1 < (int)odd.size(); i += 2) {
-            int src = odd[i];
-            int dst = odd[i + 1];
-            auto path = shortestPath(mult, src, dst);
-            if (path.empty()) continue;
+            std::ostringstream os;
+            os << "Odd vertices:";
+            for (int v : odd) os << " " << D(v);
+            res.log.push_back(os.str());
 
-            std::ostringstream p;
-            p << "Duplicated path " << D(src) << " -> " << D(dst) << ": ";
-            for (int k = 0; k < (int)path.size(); k++) {
-                if (k) p << " -- ";
-                p << D(path[k]);
+            if (n < 3) {
+                res.log.push_back("Cannot modify this graph under restrictions: "
+                                  "need at least 3 vertices to avoid duplicate edges "
+                                  "and keep the graph connected.");
+                res.modificationPossible = false;
+                break;
             }
-            res.log.push_back(p.str());
 
-            for (int k = 0; k + 1 < (int)path.size(); k++) {
-                int u = path[k];
-                int v = path[k + 1];
-                addEdge(mult, u, v);
-                res.addedEdges.push_back({u, v});
-                std::ostringstream add;
-                add << "Added duplicate edge (" << D(u) << " -- " << D(v)
-                    << ").";
-                res.log.push_back(add.str());
+            bool changed = false;
+
+            for (int i = 0; i < (int)odd.size() && !changed; i++) {
+                for (int j = i + 1; j < (int)odd.size() && !changed; j++) {
+                    int u = odd[i];
+                    int v = odd[j];
+                    if (adj[u][v] == 0) {
+                        addSimpleEdge(adj, u, v);
+                        res.addedEdges.push_back({u, v});
+                        std::ostringstream add;
+                        add << "Added missing edge (" << D(u) << " -- "
+                            << D(v) << ").";
+                        res.log.push_back(add.str());
+                        changed = true;
+                    }
+                }
             }
+
+            for (int i = 0; i < (int)odd.size() && !changed; i++) {
+                for (int j = i + 1; j < (int)odd.size() && !changed; j++) {
+                    int u = odd[i];
+                    int v = odd[j];
+                    if (adj[u][v] > 0 && canRemoveWithoutDisconnecting(adj, u, v)) {
+                        removeSimpleEdge(adj, u, v);
+                        res.removedEdges.push_back({u, v});
+                        std::ostringstream rem;
+                        rem << "Removed edge (" << D(u) << " -- "
+                            << D(v) << "); graph remains connected.";
+                        res.log.push_back(rem.str());
+                        changed = true;
+                    }
+                }
+            }
+
+            for (int i = 0; i < (int)odd.size() && !changed; i++) {
+                for (int j = i + 1; j < (int)odd.size() && !changed; j++) {
+                    int u = odd[i];
+                    int v = odd[j];
+                    if (adj[u][v] > 0)
+                        changed = tryEdgeSwapForOddPair(adj, u, v, res);
+                }
+            }
+
+            if (!changed) {
+                res.log.push_back("Cannot modify this graph under restrictions: "
+                                  "no legal add/remove operation was found.");
+                res.modificationPossible = false;
+                break;
+            }
+        }
+
+        currentDegrees = degreesOf(adj);
+        odd = oddVertices(currentDegrees);
+        if (!odd.empty() && res.modificationPossible) {
+            res.log.push_back("Cannot modify this graph under restrictions: "
+                              "the add/remove process did not reach all even degrees.");
+            res.modificationPossible = false;
         }
     }
 
-    res.modifiedDegrees = degreesOf(mult);
-    res.eulerCycle = hierholzer(mult);
+    res.modifiedDegrees = degreesOf(adj);
+    if (res.modificationPossible && isConnected(adj) &&
+        oddVertices(res.modifiedDegrees).empty()) {
+        res.eulerCycle = hierholzer(adj);
+    } else {
+        res.eulerCycle.clear();
+    }
     return res;
 }
 
@@ -263,17 +373,26 @@ void printEulerianResult(const EulerianResult& res) {
     for (const auto& line : res.log)
         std::cout << "    - " << line << "\n";
 
+    if (!res.modificationPossible) {
+        std::cout << "\n  " << sep << "\n";
+        return;
+    }
+
     std::cout << "\n  Modified degrees:\n";
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < (int)res.modifiedDegrees.size(); i++) {
         std::cout << "    deg(" << D(i) << ") = " << res.modifiedDegrees[i]
                   << "  " << (res.modifiedDegrees[i] % 2 ? "odd" : "even")
                   << "\n";
     }
 
     std::cout << "\n  Euler cycle:\n    ";
-    for (int i = 0; i < (int)res.eulerCycle.size(); i++) {
-        if (i) std::cout << " -> ";
-        std::cout << D(res.eulerCycle[i]);
+    if (res.eulerCycle.empty()) {
+        std::cout << "Not constructed.";
+    } else {
+        for (int i = 0; i < (int)res.eulerCycle.size(); i++) {
+            if (i) std::cout << " -> ";
+            std::cout << D(res.eulerCycle[i]);
+        }
     }
     std::cout << "\n\n  " << sep << "\n";
 }

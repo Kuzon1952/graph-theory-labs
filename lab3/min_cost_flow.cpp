@@ -85,7 +85,7 @@ static std::vector<int> reconstructPath(
 // ─────────────────────────────────────────────────────────────────────────────
 //  Min-cost flow  —  successive shortest paths via Floyd-Warshall
 //
-//  Algorithm (lecture tg9a):
+//  Algorithm :
 //   1. phi_max = Ford-Fulkerson(cap, src, dst).
 //      theta = floor(2/3 * phi_max).
 //   2. Build residual network (initially same as cap/cost).

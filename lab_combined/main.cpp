@@ -347,6 +347,7 @@ void menuPrufer() {
     printDecodedTree(decoded);
 }
 
+
 // ── 16. Eulerian graph / Euler cycle ──────────────────────────────────────────
 void menuEulerianCycle() {
     if (!requireLab5Undirected()) { return; }
@@ -372,6 +373,9 @@ void menuFundamentalCutsets() {
 
     auto cutsets = buildFundamentalCutsets(gGraph, gMST.edges);
     printFundamentalCutsets(cutsets);
+    if (cutsets.empty()) {
+        return;
+    }
 
     int count = readInt("  Number of cutsets for symmetric difference: ");
     if (count < 0) {

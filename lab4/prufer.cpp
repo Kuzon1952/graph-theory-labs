@@ -65,7 +65,7 @@ PruferResult pruferEncode(const std::vector<MSTEdge>& mstEdges, int n) {
         std::cout << "    Last edge: (" << last[0] + 1 << ", "
                   << last[1] + 1 << ")  weight=" << w << "\n";
     }
-
+5t
     return { code, weights };
 }
 
@@ -119,10 +119,23 @@ void printPruferResult(const PruferResult& res, int n) {
     std::cout << "\n  " << sep << "\n";
     std::cout << "  PRUFER CODE  (n=" << n << ", code length=" << res.code.size() << ")\n";
     std::cout << "  " << sep << "\n";
-    std::cout << "\n  Prufer sequence:  [ ";
-    for (int i = 0; i < (int)res.code.size(); i++) {
-        if (i) std::cout << ", ";
-        std::cout << res.code[i];
+    // std::cout << "\n  Prufer sequence:  [ ";
+    // for (int i = 0; i < (int)res.code.size(); i++) {
+    //     if (i) std::cout << ", ";
+    //     std::cout << res.code[i];
+    // }
+    // std::cout << " ]\n";
+    std::cout <<"\n Prufer sequence: [ ";
+    if (res.code.empty())
+    {
+        std::cout << "0";
+    } else
+    {
+        for (int i = 0; i < (int)res.code.size(); i++ )
+        {
+            if (i) std::cout << ", ";
+            std::cout << res.code[i];
+        }
     }
     std::cout << " ]\n";
     std::cout << "\n  Edge weights (in removal order, length " << res.weights.size() << "):\n  [ ";
