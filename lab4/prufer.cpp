@@ -65,7 +65,7 @@ PruferResult pruferEncode(const std::vector<MSTEdge>& mstEdges, int n) {
         std::cout << "    Last edge: (" << last[0] + 1 << ", "
                   << last[1] + 1 << ")  weight=" << w << "\n";
     }
-5t
+
     return { code, weights };
 }
 
