@@ -28,7 +28,7 @@ private:
     RBNode* treeMinimum(RBNode* node);
     void deleteFixup(RBNode* x);
     void destroyTree(RBNode* node);
-    void printTreeHelper(RBNode* node, int indent);
+    void printTreeHelper(RBNode* node, const string& prefix, bool isLeft, bool isRoot);
     void inOrderHelper(RBNode* node);
     int countNodes(RBNode* node);
 

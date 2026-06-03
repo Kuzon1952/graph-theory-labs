@@ -214,20 +214,27 @@ void RBTree::destroyTree(RBNode* node) {
 }
 
 // Print tree sideways (right subtree on top, left on bottom)
-// indent controls horizontal spacing for depth
-void RBTree::printTreeHelper(RBNode* node, int indent) {
+void RBTree::printTreeHelper(RBNode* node, const string& prefix, bool isLeft, bool isRoot) {
     if (node == NIL) {
-        cout << string(indent, ' ') << "[B] NIL" << endl;
+        if (isRoot)
+            cout << "[B] NIL" << endl;
+        else
+            cout << prefix << (isLeft ? "\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80 " : "\xe2\x94\x8c\xe2\x94\x80\xe2\x94\x80 ") << "[B] NIL" << endl;
         return;
     }
     // Print right subtree first (appears on top)
-    printTreeHelper(node->right, indent + 6);
-    // Print current node with indentation and color
-    cout << string(indent, ' ')
-         << (node->color == RED ? "[R] " : "[B] ")
-         << node->word << "(" << node->count << ")" << endl;
+    string rightPrefix = isRoot ? "  " : (prefix + (isLeft ? "\xe2\x94\x82   " : "    "));
+    printTreeHelper(node->right, rightPrefix, false, false);
+    // Print current node with connector
+    string label = (node->color == RED ? "[R] " : "[B] ");
+    if (isRoot)
+        cout << label << node->word << "(" << node->count << ")" << endl;
+    else
+        cout << prefix << (isLeft ? "\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80 " : "\xe2\x94\x8c\xe2\x94\x80\xe2\x94\x80 ")
+             << label << node->word << "(" << node->count << ")" << endl;
     // Print left subtree (appears on bottom)
-    printTreeHelper(node->left, indent + 6);
+    string leftPrefix = isRoot ? "  " : (prefix + (isLeft ? "    " : "\xe2\x94\x82   "));
+    printTreeHelper(node->left, leftPrefix, true, false);
 }
 
 // In-order traversal: prints words in sorted order
@@ -414,9 +421,7 @@ void RBTree::printTree() {
     cout << "=== RB-Tree Structure ===" << endl;
     cout << "(read sideways: right on top, left on bottom)" << endl;
     cout << "[B] = Black, [R] = Red" << endl;
-    cout << "---" << endl;
-    printTreeHelper(root, 0);
-    cout << "---" << endl;
+    printTreeHelper(root, "", false, true);
 }
 
 bool RBTree::isEmpty() {
